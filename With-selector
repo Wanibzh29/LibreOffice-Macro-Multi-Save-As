@@ -1,0 +1,58 @@
+Sub MultiEnregistrerAvecSelecteur
+    Dim oDoc As Object
+    Dim sNomFichier As String, sExtension As String
+    Dim aChemins() As String
+    Dim sChemin As String
+    Dim i As Integer, n As Integer
+    Dim oFolderPicker As Object
+
+    oDoc = ThisComponent
+
+    ' Demander le nom du fichier
+    sNomFichier = InputBox("Nom du fichier à enregistrer (sans extension):", "Multi-Enregistrer Sous")
+    If sNomFichier = "" Then Exit Sub
+
+    ' Déterminer l'extension en fonction du type de document
+    If oDoc.supportsService("com.sun.star.text.TextDocument") Then
+        sExtension = ".odt"
+    ElseIf oDoc.supportsService("com.sun.star.sheet.SpreadsheetDocument") Then
+        sExtension = ".ods"
+    ElseIf oDoc.supportsService("com.sun.star.presentation.PresentationDocument") Then
+        sExtension = ".odp"
+    Else
+        MsgBox "Type de document non supporté."
+        Exit Sub
+    End If
+
+    ' Demander les chemins via sélecteur graphique
+    n = 0
+    ReDim aChemins(0)
+    Do
+        oFolderPicker = CreateUnoService("com.sun.star.ui.dialogs.FolderPicker")
+        oFolderPicker.setTitle("Sélectionnez un dossier de destination")
+        
+        If oFolderPicker.execute() = 1 Then
+            sChemin = ConvertFromURL(oFolderPicker.getDirectory())
+            aChemins(n) = sChemin
+            n = n + 1
+            ReDim Preserve aChemins(n)
+        Else
+            Exit Do ' Annulé
+        End If
+    Loop
+
+    ' Si aucun chemin choisi
+    If n = 0 Then
+        MsgBox "Aucun chemin sélectionné.", 48
+        Exit Sub
+    End If
+
+    ' Enregistrer dans tous les dossiers sélectionnés
+    For i = 0 To n - 1
+        Dim sURL As String
+        sURL = ConvertToURL(aChemins(i) & "\" & sNomFichier & sExtension)
+        oDoc.storeToURL(sURL, Array())
+    Next i
+
+    MsgBox "Fichier enregistré dans " & n & " emplacement(s)."
+End Sub
